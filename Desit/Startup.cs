@@ -1,8 +1,12 @@
+using Desit.Messages;
+using Desit.Models;
+using Desit.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SpaServices.AngularCli;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using WebSocketManager;
 
 namespace Desit
 {
@@ -25,6 +29,17 @@ namespace Desit
             {
                 configuration.RootPath = "ClientApp/dist";
             });
+
+            // Asigna la cadena de conexión al dataContext (el cual será instanciado y liberado por cada solicitud a la BD).
+            DataContext.ConnectionString = Configuration.GetConnectionString("DefaultConnection");
+
+            // Agrega repositorios (clases que manejan el modelo)
+            services.AddRepositories();
+
+            // Agrego la interrogación secuecial...
+            services.AddSingleton<IntSecuencialService>();
+
+            services.AddWebSocketManager();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -36,9 +51,9 @@ namespace Desit
             }
             else
             {
-                app.UseExceptionHandler("/Home/Error");
+                app.UseExceptionHandler("/Home/Error"); // TODO: corroborar que avise al usuario
             }
-
+            
             app.UseStaticFiles();
             app.UseSpaStaticFiles();
 
@@ -49,6 +64,9 @@ namespace Desit
                     template: "{controller}/{action=Index}/{id?}");
             });
 
+            app.UseWebSockets();
+            app.MapWebSocketManager("/messages", app.ApplicationServices.GetService<MessagesHandler>());
+            
             app.UseSpa(spa =>
             {
                 // To learn more about options for serving an Angular SPA from ASP.NET Core,
